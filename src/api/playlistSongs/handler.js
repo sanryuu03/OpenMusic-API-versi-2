@@ -11,6 +11,7 @@ class PlaylistSongsHandler {
 
   async postPlaylistSongHandler(request, h) {
     this._validator.validatePlaylistSongPayload(request.payload);
+    const {id: playlistId} = request.params;
     const {songId} = request.payload;
     const {id} = request.params;
     const {id: credentialId} = request.auth.credentials;
@@ -19,6 +20,12 @@ class PlaylistSongsHandler {
     await this._playlistSongsService.verifySongExist(songId);
     await this._playlistSongsService.addSongsToPlaylist({id, songId});
 
+    await this._playlistsService.addPlaylistActivities(
+        playlistId,
+        songId,
+        credentialId,
+        'add',
+    );
     const response = h.response({
       status: 'success',
       message: 'Lagu berhasil ditambahkan pada playlist',
@@ -45,12 +52,20 @@ class PlaylistSongsHandler {
   }
 
   async deletePlaylistSongByIdHandler(request, h) {
+    const {id: playlistId} = request.params;
     const {id} = request.params;
     const {songId} = request.payload;
     const {id: credentialId} = request.auth.credentials;
 
     await this._playlistsService.verifyPlaylistOwner(id, credentialId);
     await this._playlistSongsService.deleteSongFromPlaylistById(id, songId);
+
+    await this._playlistsService.addPlaylistActivities(
+        playlistId,
+        songId,
+        credentialId,
+        'delete',
+    );
 
     return {
       status: 'success',
