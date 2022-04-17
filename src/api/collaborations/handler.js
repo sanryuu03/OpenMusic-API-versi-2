@@ -1,16 +1,11 @@
-class ColaborationsHandler {
-  constructor(
-      collaborationsService,
-      playlistsService,
-      validator,
-  ) {
+class CollaborationsHandler {
+  constructor(collaborationsService, playlistsService, validator) {
     this._collaborationsService = collaborationsService;
     this._playlistsService = playlistsService;
     this._validator = validator;
 
     this.postCollaborationHandler = this.postCollaborationHandler.bind(this);
-    this.deleteCollaborationHandler =
-        this.deleteCollaborationHandler.bind(this);
+    this.deleteCollaborationHandler = this.deleteCollaborationHandler.bind(this);
   }
 
   async postCollaborationHandler(request, h) {
@@ -18,10 +13,11 @@ class ColaborationsHandler {
     const {id: credentialId} = request.auth.credentials;
     const {playlistId, userId} = request.payload;
 
-    await this._playlistsService.verifyPlaylistOwner(
-        playlistId,
-        credentialId,
-    );
+    await this._playlistsService.verifyPlaylistOwner(playlistId, credentialId);
+
+    // verifikasi data user dan playlist dulu
+    await this._collaborationsService.verifyExistingUser(userId);
+    await this._collaborationsService.verifyExistingPlaylist(playlistId);
 
     const collaborationId = await this._collaborationsService.addCollaboration(playlistId, userId);
 
@@ -41,10 +37,7 @@ class ColaborationsHandler {
     const {id: credentialId} = request.auth.credentials;
     const {playlistId, userId} = request.payload;
 
-    await this._playlistsService.verifyPlaylistOwner(
-        playlistId,
-        credentialId,
-    );
+    await this._playlistsService.verifyPlaylistOwner(playlistId, credentialId);
     await this._collaborationsService.deleteCollaboration(playlistId, userId);
 
     return {
@@ -54,4 +47,4 @@ class ColaborationsHandler {
   }
 }
 
-module.exports = ColaborationsHandler;
+module.exports = CollaborationsHandler;

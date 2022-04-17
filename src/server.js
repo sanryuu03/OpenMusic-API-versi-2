@@ -11,8 +11,6 @@ const songs = require('./api/songs');
 const SongsService = require('./services/postgres/SongsService');
 const SongsValidator = require('./validator/songs');
 
-const ClientError = require('./exceptions/ClientError');
-
 const users = require('./api/users');
 const UsersService = require('./services/postgres/UsersService');
 const UsersValidator = require('./validator/users');
@@ -24,25 +22,21 @@ const AuthenticationsValidator = require('./validator/authentications');
 
 const playlists = require('./api/playlists');
 const PlaylistsService = require('./services/postgres/PlaylistsService');
-const PlaylistsValidator = require('./validator/playlists');
-
-const playlistSongs = require('./api/playlistSongs');
-const PlaylistSongsService = require('./services/postgres/PlaylistSongsService');
-const PlaylistSongsValidator = require('./validator/playlistSongs');
+const PlaylistsValidator = require('./validator/playlist');
 
 const collaborations = require('./api/collaborations');
 const CollaborationsService = require('./services/postgres/CollaborationsService');
 const CollaborationsValidator = require('./validator/collaborations');
-
+const ClientError = require('./exceptions/ClientError');
 
 const init = async () => {
-  const collaborationsService = new CollaborationsService();
   const albumsService = new AlbumsService();
   const songsService = new SongsService();
   const usersService = new UsersService();
   const authenticationsService = new AuthenticationsService();
-  const playlistsService = new PlaylistsService();
-  const playlistSongsService = new PlaylistSongsService();
+  const collaborationsService = new CollaborationsService();
+  const playlistsService = new PlaylistsService(collaborationsService);
+
   const server = Hapi.server({
     port: process.env.PORT,
     host: process.env.HOST,
@@ -61,7 +55,7 @@ const init = async () => {
   ]);
 
   // mendefinisikan strategy autentikasi jwt
-  server.auth.strategy('openmusic_jwt', 'jwt', {
+  server.auth.strategy('openmusicapp_jwt', 'jwt', {
     keys: process.env.ACCESS_TOKEN_KEY,
     verify: {
       aud: false,
@@ -79,6 +73,13 @@ const init = async () => {
 
   await server.register([
     {
+      plugin: users,
+      options: {
+        service: usersService,
+        validator: UsersValidator,
+      },
+    },
+    {
       plugin: albums,
       options: {
         service: albumsService,
@@ -93,10 +94,10 @@ const init = async () => {
       },
     },
     {
-      plugin: users,
+      plugin: playlists,
       options: {
-        service: usersService,
-        validator: UsersValidator,
+        service: playlistsService,
+        validator: PlaylistsValidator,
       },
     },
     {
@@ -109,29 +110,13 @@ const init = async () => {
       },
     },
     {
-      plugin: playlists,
-      options: {
-        service: playlistsService,
-        validator: PlaylistsValidator,
-      },
-    },
-    {
-      plugin: playlistSongs,
-      options: {
-        playlistSongsService,
-        playlistsService,
-        validator: PlaylistSongsValidator,
-      },
-    },
-    {
       plugin: collaborations,
       options: {
         collaborationsService,
         playlistsService,
         validator: CollaborationsValidator,
       },
-    },
-  ]);
+    }]);
 
   /**
    Di sini kamu bisa mendeklarasikan atau membuat extensions function untuk life cycle server onPreResponse, di mana ia akan mengintervensi response sebelum dikirimkan ke client. Di sana kamu bisa menetapkan error handling bila response tersebut merupakan client error.
